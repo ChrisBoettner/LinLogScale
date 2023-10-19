@@ -14,7 +14,7 @@ This repository provides a custom symmetrical linear-logarithmic (`linlog`) scal
 1. Simply download and import the provided Python file into your project.
 2. Ensure you have Matplotlib and numpy installed.
 
-## Example Usage
+## Usage and Example
 
 After importing the module, you need to **register** the scale before applying the symmetrical linear-log scale to your Matplotlib plots:
 
@@ -37,7 +37,7 @@ fig, ax = plt.subplots()
 
 # Apply our custom scale to the y-axis
 linthresh = 10
-ax.set_yscale("linlog", base=10, linthresh=linthresh, linscale=1, clip_value = -3)
+ax.set_yscale("linlog", base=10, linthresh=linthresh, linscale=1, clip_value = "mask")
 ax.plot(x, y, label="y = x^2")
 
 # Add a horizontal line to indicate the linthresh value
@@ -47,4 +47,8 @@ ax.axhline(linthresh, color="r", linestyle="--", label=f"linthresh={linthresh}")
 plt.legend()
 plt.show()
 ```
+
+The behaviour for inputs <=0 can be set using clip_value. The default is ```"mask"```, which effectively masks out these values. However, clip_value can be set, so that all inputs <=0 will be set to this value.
+
+Specifically, this is needed when making **bar plots**, with bars starting at 0. In this case,  **clip_value should be set to some value smaller than the lowest bar height**.
 
