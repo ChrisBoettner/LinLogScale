@@ -21,11 +21,11 @@ After importing the module, you can register apply the symmetrical linear-log sc
 ```
 import matplotlib.pyplot as plt
 
-# Assuming the library code is saved as 'linlog_scale.py'
+# Assuming the library code is saved as 'linlogscale.py'
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.scale register_scale
-from linlog_scale import LinLogScale
+from linlogscale import LinLogScale
 
 # Register Scale
 register_scale(LinLogScale)
@@ -40,7 +40,7 @@ fig, ax = plt.subplots()
 # Apply our custom scale to the y-axis
 ax.set_yscale("linlog", linthresh=10, linscale=1)
 
-# Plot daata
+# Plot data
 ax.plot(x, y, label="y = x^2")
 
 # Display the plot
