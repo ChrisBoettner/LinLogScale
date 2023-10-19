@@ -1,12 +1,18 @@
-from typing import Optional
+from typing import Any, Optional
 
-import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
-from matplotlib.scale import ScaleBase, register_scale
-from matplotlib.ticker import Formatter, Locator, LogLocator, MaxNLocator, NullFormatter
+from matplotlib.scale import ScaleBase
+from matplotlib.ticker import (
+    Locator,
+    LogLocator,
+    MaxNLocator,
+    NullFormatter,
+    ScalarFormatter,
+)
 from matplotlib.transforms import Transform
 
+# ###################### TRANSFORM #####################################################
 
 class LinLogTransform(Transform):
     """
@@ -179,27 +185,30 @@ class InvertedLinLogTransform(Transform):
         return LinLogTransform(self.base, self.linthresh, self.linscale)
 
 
-class LinLogFormatter(Formatter):
+# ###################### FORMATTER #####################################################
+
+
+class LinLogFormatter(ScalarFormatter):
     """
     Lin-log formatter for axis labels.
 
     This formatter is tailored for logarithmic scales that also have a linear region.
     For values within the linear threshold, it formats with precision that aligns with
-    the scale of the number. For values outside this threshold, it displays the number
-    as an integer.
+    the scale of the number. For values outside this threshold, use the default
+    ScalarFormatter.
     """
 
-    def __init__(self, linthresh: float) -> None:
+    def __init__(self, linthresh: float):
         """
-        Initialize the custom log formatter.
+        Initialize the formatter
 
         Parameters
         ----------
         linthresh : float
-            The range within which the numbers are considered to be in the linear scale.
+            The threshold between linear and logarithmic regime.
         """
         super().__init__()
-        self.linthresh: float = linthresh
+        self.linthresh = linthresh
 
     def __call__(self, x: float, pos: Optional[int] = None) -> str:
         """
@@ -223,8 +232,12 @@ class LinLogFormatter(Formatter):
             format_string: str = "{:." + str(decimal_places) + "f}"
             return format_string.format(x)
 
-        # For values outside the linear threshold, format as an integer
-        return f"{int(x)}"
+        else:
+            # Default ScalarFormatter formatting
+            return super().__call__(x, pos)
+
+
+# ###################### LOCATOR #######################################################
 
 
 class CombinedLogLinearLocator(Locator):
@@ -234,6 +247,7 @@ class CombinedLogLinearLocator(Locator):
     This locator creates tick locations suitable for log-linear plots, where there's
     a transition from a logarithmic scale to a linear scale at a certain threshold.
     This is useful for visualizing datasets that span several orders of magnitude.
+
     """
 
     def __init__(
@@ -241,8 +255,8 @@ class CombinedLogLinearLocator(Locator):
         base: float = 10.0,
         subs: tuple = (1.0,),
         linthresh: float = 2,
-        numticks: Optional[int] = None,
-        numbins: Optional[int] = None,
+        numticks_log: Optional[int] = None,
+        numbins: Optional[int | str] = "auto",
     ) -> None:
         """
         Initialize the combined log-linear locator.
@@ -258,20 +272,20 @@ class CombinedLogLinearLocator(Locator):
         linthresh : float, optional
             The range within which the numbers are considered to be in the linear scale.
             The default is 2.
-        numticks : Optional[int], optional
-            The number of ticks intended for the logarithmic scale.
-        numbins : Optional[int], optional
-            The number of bins intended for the linear scale.
+        numticks_log : Optional[int], optional
+            The number of ticks intended for the logarithmic scale. The default is None.
+        numbins : Optional[int | str], optional
+            The number of bins intended for the linear scale. The default is auto.
         """
         super().__init__()
         self.base: float = base
         self.subs: tuple = subs
         self.linthresh: float = linthresh
-        self.numticks: Optional[int] = numticks
-        self.numbins: Optional[int] = numbins
+        self.numticks_log: Optional[int] = numticks_log
+        self.numbins: Optional[int | str] = numbins
         # Separate locators for log and linear regions
-        self.log_locator = LogLocator(base=base, subs=subs, numticks=numticks)
-        self.maxnlocator = MaxNLocator(numbins)
+        self.log_locator = LogLocator(base=base, subs=subs, numticks=numticks_log)
+        self.maxnlocator = MaxNLocator(numbins, symmetric=True)
 
     def tick_values(self, vmin: float, vmax: float) -> np.ndarray:
         """
@@ -298,10 +312,10 @@ class CombinedLogLinearLocator(Locator):
 
         # Get ticks for log and linear regions
         log_ticks = self.log_locator.tick_values(log_vmin, log_vmax)
-        log_ticks = log_ticks[log_ticks < self.linthresh]
+        log_ticks = log_ticks[log_ticks <= self.linthresh]
 
         linear_ticks = self.maxnlocator.tick_values(linear_vmin, linear_vmax)
-        linear_ticks = linear_ticks[linear_ticks >= linear_vmin]
+        linear_ticks = linear_ticks[linear_ticks > linear_vmin]
 
         # Combine and return the ticks
         return np.concatenate([log_ticks, linear_ticks])
@@ -317,6 +331,66 @@ class CombinedLogLinearLocator(Locator):
         """
         vmin, vmax = self.axis.get_view_interval()
         return self.tick_values(vmin, vmax)
+
+
+class CustomLogLocator(LogLocator):
+    """
+    A custom locator for axes that combines both logarithmic and linear scales, used for
+    the minor ticks.
+
+    This locator creates tick locations suitable for log plots, but only below the
+    threshold value linthresh.
+    """
+
+    def __init__(self, linthresh: float = 2, *args: Any, **kwargs: Any):
+        """
+        Initialize the combined log-linear locator.
+
+        Parameters
+        ----------
+        linthresh : float, optional
+            The range within which the numbers are considered to be in the linear scale.
+            The default is 2.
+        args, kwargs : Any
+            Further parameter passed to LogLocator.
+
+        """
+        super().__init__(*args, **kwargs)
+        self.linthresh = linthresh
+
+    def tick_values(self, vmin: float, vmax: float) -> np.ndarray:
+        """
+        Calculate tick values given the range of the data, cut off at threshold.
+
+        Parameters
+        ----------
+        vmin : float
+            Minimum value of the data.
+        vmax : float
+            Maximum value of the data.
+
+        Returns
+        -------
+        np.ndarray
+            Array of tick values.
+        """
+        tick_values = super().tick_values(vmin, vmax)
+        return np.array([val for val in tick_values if val <= self.linthresh])
+
+    def __call__(self) -> np.ndarray:
+        """
+        Return tick values for the current axis view interval.
+
+        Returns
+        -------
+        np.ndarray
+            Array of tick values.
+        """
+        vmin, vmax = self.axis.get_view_interval()
+        return self.tick_values(vmin, vmax)
+
+
+# ###################### SCALE #########################################################
 
 
 class LinLogScale(ScaleBase):
@@ -388,7 +462,12 @@ class LinLogScale(ScaleBase):
             CombinedLogLinearLocator(base=self.base, linthresh=self.linthresh)
         )
         axis.set_major_formatter(formatter)
-        axis.set_minor_locator(LogLocator(base=self.base, subs=np.arange(2, 10)))
+
+        axis.set_minor_locator(
+            CustomLogLocator(
+                base=self.base, linthresh=self.linthresh, subs=np.arange(2, 10)
+            ),
+        )
         axis.set_minor_formatter(NullFormatter())
 
     def get_transform(self) -> LinLogTransform:
@@ -401,3 +480,32 @@ class LinLogScale(ScaleBase):
             The transformation object.
         """
         return self._transform
+    
+if __name__=="__main__":
+    # Assuming the library code is saved as 'linlogscale.py'
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib.scale import register_scale
+    
+    # Register Scale
+    register_scale(LinLogScale)
+    
+    # Create synthetic data
+    x = np.linspace(0.0121312, 7.21, 100)
+    y = x**2
+    
+    # Create a figure and axis
+    fig, ax = plt.subplots()
+    
+    # Apply our custom scale to the y-axis
+    linthresh = 20.2123234
+    ax.set_yscale("linlog", linthresh=linthresh, linscale=1)
+    ax.plot(x, y, label="y = x^2")
+    
+    # Add a horizontal line to indicate the linthresh value
+    ax.axhline(linthresh, color="r", linestyle="--", label=f"linthresh={linthresh}")
+    
+    # Display the plot
+    plt.legend()
+    plt.show()
+
