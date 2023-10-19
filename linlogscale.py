@@ -431,10 +431,10 @@ class LinLogScale(ScaleBase):
         self,
         axis: Axes,
         base: float = 10,
-        linthresh: float = 2,
-        subs: Optional[tuple] = None,
+        linthresh: float = 1,
         linscale: float = 1,
         clip_value: float = 0,
+        subs: Optional[tuple] = None,
     ) -> None:
         """
         Initialize the custom symmetrical logarithmic scale.
@@ -447,17 +447,68 @@ class LinLogScale(ScaleBase):
             Base of the logarithm. The default is 10.
         linthresh : float, optional
             The range within which the numbers are linearly scaled. The default is 2.
-        subs : Optional[tuple], optional
-            The sequence of the location of the minor ticks.
         linscale : float, optional
             Factor by which data within linthresh is linearly scaled. The default is 1.
         clip_value: float
             Inputs that are <=0 (and therefore make a problem for the log scale) are set
             to this value in LinLogTransform. The default is 0.
+        subs : Optional[tuple], optional
+            The sequence of the location of the minor ticks.
         """
         super().__init__(axis)
         self._transform = LinLogTransform(base, linthresh, linscale, clip_value)
         self.subs = subs
+
+    @property
+    def base(self) -> float:
+        """Base of the logarithm used by this scale."""
+        return self._transform.base
+
+    @property
+    def linthresh(self) -> float:
+        """Range within which numbers are linearly scaled."""
+        return self._transform.linthresh
+
+    @property
+    def linscale(self) -> float:
+        """Factor by which data within linthresh is linearly scaled."""
+        return self._transform.linscale
+
+    def set_default_locators_and_formatters(self, axis: Axes) -> None:
+        """
+        Set the default locators and formatters for this scale.
+
+        Parameters
+        ----------
+        axis : Axes
+            The axis object to which this scale is attached.
+        """
+        formatter = LinLogFormatter(self.linthresh)
+
+        # Set major and minor locators and formatters
+        axis.set_major_locator(
+            CombinedLogLinearLocator(base=self.base, linthresh=self.linthresh)
+        )
+        axis.set_major_formatter(formatter)
+
+        axis.set_minor_locator(
+            CustomLogLocator(
+                base=self.base, linthresh=self.linthresh, subs=np.arange(2, 10)
+            ),
+        )
+        axis.set_minor_formatter(NullFormatter())
+
+    def get_transform(self) -> LinLogTransform:
+        """
+        Return the transformation associated with this scale.
+
+        Returns
+        -------
+        LinLogTransform
+            The transformation object.
+        """
+        return self._transform
+
 
     @property
     def base(self) -> float:

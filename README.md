@@ -37,7 +37,7 @@ fig, ax = plt.subplots()
 
 # Apply our custom scale to the y-axis
 linthresh = 10
-ax.set_yscale("linlog", linthresh=linthresh, linscale=1)
+ax.set_yscale("linlog", base=10, linthresh=linthresh, linscale=1, clip_value = -3)
 ax.plot(x, y, label="y = x^2")
 
 # Add a horizontal line to indicate the linthresh value
