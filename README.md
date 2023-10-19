@@ -1,10 +1,10 @@
 # LinLogScale
 
-This repository provides a custom symmetrical linear-logarithmic (`linlog`) scale for Matplotlib, inspired by the symlog scale. The scale is logarithmic up a a certain threshold value, after which it becomes linear.
+This repository provides a custom linear-logarithmic (`linlog`) scale for Matplotlib, inspired by the symlog scale. The scale is logarithmic up a a certain threshold value, after which it becomes linear.
 
 ## Features
 
-1. **Custom Symmetrical Log Transformation**: Provides both forward and inverse transformations.
+1. **Custom LinLog Transformation**: Provides both forward and inverse transformations.
 2. **Formatter for Log-Linear Scales**: Suitable for data that transitions between log and linear scales.
 3. **Custom Locator**: Combines both logarithmic and linear scales.
 4. **Integration with Matplotlib**: Can be easily incorporated into Matplotlib plots.
