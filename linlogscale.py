@@ -14,6 +14,7 @@ from matplotlib.transforms import Transform
 
 # ###################### TRANSFORM #####################################################
 
+
 class LinLogTransform(Transform):
     """
     Symmetrical linear log transform class.
@@ -22,7 +23,9 @@ class LinLogTransform(Transform):
     input_dims: int = 1
     output_dims: int = 1
 
-    def __init__(self, base: float, linthresh: float, linscale: float) -> None:
+    def __init__(
+        self, base: float, linthresh: float, linscale: float, clip_value: float
+    ) -> None:
         """
         Initialize the symmetrical log transformation.
 
@@ -36,6 +39,9 @@ class LinLogTransform(Transform):
         linscale : float
             This allows the linear range (-linthresh to linthresh) to be stretched
             relative to the logarithmic range.
+        clip_value: float
+            Inputs that are <=0 (and therefore make a problem for the log scale) are set
+            to this value.
 
         Raises
         ------
@@ -55,6 +61,7 @@ class LinLogTransform(Transform):
         self.base: float = base
         self.linthresh: float = linthresh
         self.linscale: float = linscale
+        self.clip_value: float = clip_value
         self._linscale_adj: float = linscale / (1.0 - self.base**-1)
         self._log_base: float = np.log(base)
 
@@ -90,6 +97,8 @@ class LinLogTransform(Transform):
                 out,
             )
 
+        # Clipping the values similar to LogScale
+        out[values <= 0] = self.clip_value
         return out
 
     def inverted(self) -> "InvertedLinLogTransform":
@@ -101,7 +110,9 @@ class LinLogTransform(Transform):
         InvertedLinLogTransform
             The inverse transformation object.
         """
-        return InvertedLinLogTransform(self.base, self.linthresh, self.linscale)
+        return InvertedLinLogTransform(
+            self.base, self.linthresh, self.linscale, self.clip_value
+        )
 
 
 class InvertedLinLogTransform(Transform):
@@ -115,7 +126,13 @@ class InvertedLinLogTransform(Transform):
     input_dims: int = 1
     output_dims: int = 1
 
-    def __init__(self, base: float, linthresh: float, linscale: float) -> None:
+    def __init__(
+        self,
+        base: float,
+        linthresh: float,
+        linscale: float,
+        clip_value: float,
+    ) -> None:
         """
         Initialize the inverted symmetrical log transformation.
 
@@ -127,15 +144,18 @@ class InvertedLinLogTransform(Transform):
             The range within which the plot is linear in the original transformation.
         linscale : float
             Used to stretch the linear range in the original transformation.
-
+        clip_value: float
+            Inputs that are <=0 (and therefore make a problem for the log scale) are set
+            to this value.
         """
         super().__init__()
 
-        linlog = LinLogTransform(base, linthresh, linscale)
+        linlog = LinLogTransform(base, linthresh, linscale, clip_value)
         self.base: float = base
         self.linthresh: float = linthresh
         self.invlinthresh: float = linlog.transform(linthresh)
         self.linscale: float = linscale
+        self.clip_value = clip_value
         self._linscale_adj: float = linscale / (1.0 - self.base**-1)
 
     def transform_non_affine(self, values: np.ndarray) -> np.ndarray:
@@ -170,7 +190,6 @@ class InvertedLinLogTransform(Transform):
                 ),
                 out,
             )
-
         return out
 
     def inverted(self) -> "LinLogTransform":
@@ -182,7 +201,9 @@ class InvertedLinLogTransform(Transform):
         LinLogTransform
             The original transformation object.
         """
-        return LinLogTransform(self.base, self.linthresh, self.linscale)
+        return LinLogTransform(
+            self.base, self.linthresh, self.linscale, self.clip_value
+        )
 
 
 # ###################### FORMATTER #####################################################
@@ -308,6 +329,7 @@ class CombinedLogLinearLocator(Locator):
 
         # Define range limits for log and linear parts
         log_vmin, log_vmax = min(vmin, self.linthresh), min(vmax, self.linthresh)
+
         linear_vmin, linear_vmax = max(vmin, self.linthresh), max(vmax, self.linthresh)
 
         # Get ticks for log and linear regions
@@ -410,6 +432,7 @@ class LinLogScale(ScaleBase):
         linthresh: float = 2,
         subs: Optional[tuple] = None,
         linscale: float = 1,
+        clip_value: float = 0,
     ) -> None:
         """
         Initialize the custom symmetrical logarithmic scale.
@@ -426,9 +449,12 @@ class LinLogScale(ScaleBase):
             The sequence of the location of the minor ticks.
         linscale : float, optional
             Factor by which data within linthresh is linearly scaled. The default is 1.
+        clip_value: float
+            Inputs that are <=0 (and therefore make a problem for the log scale) are set
+            to this value in LinLogTransform. The default is 0.
         """
         super().__init__(axis)
-        self._transform = LinLogTransform(base, linthresh, linscale)
+        self._transform = LinLogTransform(base, linthresh, linscale, clip_value)
         self.subs = subs
 
     @property
