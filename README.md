@@ -38,12 +38,15 @@ y = x**2
 fig, ax = plt.subplots()
 
 # Apply our custom scale to the y-axis
-ax.set_yscale("linlog", linthresh=10, linscale=1)
-
-# Plot data
+linthresh = 10
+ax.set_yscale("linlog", linthresh=linthresh, linscale=1)
 ax.plot(x, y, label="y = x^2")
 
+# Add a horizontal line to indicate the linthresh value
+ax.axhline(linthresh, color="r", linestyle="--", label=f"linthresh={linthresh}")
+
 # Display the plot
+plt.legend()
 plt.show()
 ```
 
