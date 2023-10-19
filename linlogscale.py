@@ -216,7 +216,7 @@ class LinLogFormatter(ScalarFormatter):
     This formatter is tailored for logarithmic scales that also have a linear region.
     For values within the linear threshold, it formats with precision that aligns with
     the scale of the number. For values outside this threshold, use the default
-    ScalarFormatter.
+    ScalarFormatter, unless their integer in which case they are returned as integers.
     """
 
     def __init__(self, linthresh: float):
@@ -253,10 +253,12 @@ class LinLogFormatter(ScalarFormatter):
             format_string: str = "{:." + str(decimal_places) + "f}"
             return format_string.format(x)
 
+        elif x.is_integer():
+            return f"{int(x)}"
+
         else:
             # Default ScalarFormatter formatting
             return super().__call__(x, pos)
-
 
 # ###################### LOCATOR #######################################################
 
