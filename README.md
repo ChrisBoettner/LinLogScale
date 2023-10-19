@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 # Assuming the library code is saved as 'linlogscale.py'
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.scale register_scale
+from matplotlib.scale import register_scale
 from linlogscale import LinLogScale
 
 # Register Scale
