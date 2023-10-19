@@ -19,7 +19,6 @@ This repository provides a custom symmetrical linear-logarithmic (`linlog`) scal
 After importing the module, you need to **register** the scale before applying the symmetrical linear-log scale to your Matplotlib plots:
 
 ```
-
 # Assuming the library code is saved as 'linlogscale.py'
 import numpy as np
 import matplotlib.pyplot as plt
