@@ -1,3 +1,4 @@
+import re
 from typing import Any, Optional
 
 import numpy as np
@@ -267,7 +268,12 @@ class LinLogFormatter(ScalarFormatter):
 
         else:
             # Default ScalarFormatter formatting
-            return super().__call__(x, pos)
+            label = super().__call__(x, pos)
+            # Remove trailing zeros after a decimal point
+            label = re.sub(r"(\.\d*?)0+$", r"\1", label)
+            # Remove the decimal point if it's the last character
+            label = label.rstrip(".")
+            return label
 
 
 # ###################### LOCATOR #######################################################
