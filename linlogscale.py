@@ -81,26 +81,33 @@ class LinLogTransform(Transform):
         """
         with np.errstate(divide="ignore", invalid="ignore"):
             out = np.where(
-                values <= self.linthresh,
-                self.linthresh
+                np.abs(values) <= self.linthresh,
+                np.sign(values)
+                * self.linthresh
                 * (1.0 + np.log(np.abs(values) / self.linthresh) / self._log_base),
                 values,
             )
 
             out = np.where(
-                values > self.linthresh,
-                self.linthresh + self._linscale_adj * (values - self.linthresh),
+                np.abs(values) > self.linthresh,
+                self.linthresh
+                + np.sign(values)
+                * self._linscale_adj
+                * (np.abs(values) - self.linthresh),
                 out,
             )
 
-        # Clipping the values similar to LogScale
-        if self.clip_value == "mask":
-            out[values <= 0] = -np.inf
-        else:
-            out[values <= 0] = self.linthresh * (
-                1.0 + np.log(np.abs(self.clip_value) / self.linthresh) / self._log_base
-            )
-        return out
+            # Clipping the values similar to LogScale
+            if self.clip_value == "mask":
+                out[values <= 0] = -np.inf
+            elif isinstance(self.clip_value, (int, float)) and self.clip_value > 0:
+                out[values <= 0] = self.linthresh * (
+                    1.0
+                    + np.log(np.abs(self.clip_value) / self.linthresh) / self._log_base
+                )
+            else:
+                raise ValueError("clip_value must either be 'mask' or a number>0.")
+            return out
 
     def inverted(self) -> "InvertedLinLogTransform":
         """
@@ -176,14 +183,17 @@ class InvertedLinLogTransform(Transform):
         """
         with np.errstate(divide="ignore", invalid="ignore"):
             out = np.where(
-                values <= self.invlinthresh,
-                self.linthresh * np.exp((np.abs(values) / self.linthresh) - 1.0),
+                np.abs(values) <= self.invlinthresh,
+                np.sign(values)
+                * self.linthresh
+                * np.exp((np.abs(values) / self.linthresh) - 1.0),
                 values,
             )
 
             out = np.where(
-                values > self.invlinthresh,
-                (
+                np.abs(values) > self.invlinthresh,
+                np.sign(values)
+                * (
                     self.linthresh
                     + (np.abs(values) - self.invlinthresh) / self._linscale_adj
                 ),
