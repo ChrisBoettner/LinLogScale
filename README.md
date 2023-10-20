@@ -44,7 +44,6 @@ fig, ax = plt.subplots()
 linthresh = 10
 
 ax.set_yscale("linlog", base=10, linthresh=linthresh, linscale=1, clip_value = "mask")
-ax.set_ylim(min(y), max(y))
 
 # Plot the data and display the plot
 ax.plot(x, y, label="y = x^2")
